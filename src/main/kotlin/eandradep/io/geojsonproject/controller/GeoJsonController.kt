@@ -3,7 +3,7 @@ package eandradep.io.geojsonproject.controller
 import eandradep.io.geojsonproject.models.dto.PathPassengerData
 import eandradep.io.geojsonproject.models.entity.RouteCoordinatePoint
 import eandradep.io.geojsonproject.models.service.coordinates.ICoordinatesService
-import eandradep.io.geojsonproject.models.service.gcpconfig.GcpConfiguration
+import eandradep.io.geojsonproject.models.service.gcpconfig.IGcpUploadService
 import eandradep.io.geojsonproject.models.service.generategeojson.IGeoJsonService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
@@ -12,9 +12,6 @@ import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.io.BufferedWriter
-import java.io.File
-import java.io.FileWriter
 import java.util.*
 
 
@@ -28,6 +25,9 @@ class GeoJsonController {
 
     @Autowired
     private val iGeoJsonService: IGeoJsonService? = null
+
+    @Autowired
+    private val iGcpUploadService: IGcpUploadService? = null
 
     //    /CUENCA/historial_CUENCA/historial/ruta_54_path_14436/fechas/08-04-2022:05:41:43/puntos/08-04-2022:05:41:50
 
@@ -48,33 +48,24 @@ class GeoJsonController {
                 return ResponseEntity<Map<*, *>>(response, HttpStatus.NOT_FOUND)
             }
 
-            val uuid = UUID.randomUUID()
+            val fileUUID = UUID.randomUUID()
+            val fileName= "$fileUUID.json"
+            val filePath = "../$fileName"
 
-            val geJsonData: String = iGeoJsonService!!.geoJsonGenerator(contraventionDTOList, uuid.toString())!!
+            val geJsonData: String = iGeoJsonService!!.geoJsonGenerator(contraventionDTOList, fileUUID.toString())!!
             if (geJsonData.isEmpty()){
                 response["message"] = "PATH PASSENGER ROUTE INFORMATION NOT FOUND"
                 response["result"] = arrayListOf<RouteCoordinatePoint>()
                 return ResponseEntity<Map<*, *>>(response, HttpStatus.NOT_FOUND)
             }
-
-            try {
-                val ruta = "/home/edisonandrade/Escritorio/$uuid.json"
-                val file = File(ruta)
-                // Si el archivo no existe es creado
-                if (!file.exists()) {
-                    file.createNewFile()
-                }
-                val fw = FileWriter(file)
-                val bw = BufferedWriter(fw)
-                bw.write(geJsonData)
-                bw.close()
-            } catch (e: java.lang.Exception) {
-                e.printStackTrace()
+            val urlFile: String = iGcpUploadService!!.uploadFileGcpStorage(filePath, fileName, geJsonData)!!
+            if (urlFile.isEmpty()){
+                response["message"] = "ERROR UPLOADING DATA !!!"
+                response["result"] = arrayListOf<RouteCoordinatePoint>()
+                return ResponseEntity<Map<*, *>>(response, HttpStatus.NOT_FOUND)
             }
-            val gcpConfiguration = GcpConfiguration()
-            gcpConfiguration.testUploadFile();
-            response["message"] = "USER CONTROLLER HAVE BEEN FOUND IN THE DATA BASE"
-            response["result"] = geJsonData
+            response["message"] = "DATA IS SUCCESSFULLY MIGRATE"
+            response["result"] = urlFile
             return ResponseEntity<Map<*, *>>(response, HttpStatus.OK)
         } catch (e: Exception) {
             response["message"] = "SERVER ERROR ...!!!!"

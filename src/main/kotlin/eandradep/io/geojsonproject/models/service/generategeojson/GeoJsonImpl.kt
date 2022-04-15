@@ -22,10 +22,10 @@ class GeoJsonImpl : IGeoJsonService {
         val pathPassengerRouteGraph = LineStringDto(contraventionDTOList)
         feature.geometry = pathPassengerRouteGraph
         feature.id = "\"$uuid\""
-        feature.properties = "\"stroke\": \"#1c71d8\",\n" +
+        feature.properties = "{\"stroke\": \"#1c71d8\",\n" +
                 "        \"stroke-width\": 1.7,\n" +
                 "        \"stroke-opacity\": 1,\n" +
-                "        \"color\": \"#F7455D\""
+                "        \"color\": \"#F7455D\"}"
         return UltimateGeoJSONBuilder.getInstance().toGeoJSON(feature)
     }
 }
